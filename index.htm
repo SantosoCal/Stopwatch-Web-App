@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"> 
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    </head>
+    <body>
+
+        <h1 align="center">Stopwatch</h1>
+
+        <p align="center">By Andrew Santoso</p>
+
+        <div id="time" style="border: 3px solid green; text-align: center;font-size: 2em; margin-bottom: 10px">00:00:00.000</div>
+        <button id="startBtn" class="btn btn-primary">Start the clock</button>
+        <button id="stopBtn" class="btn btn-danger" disabled="true">Stop the clock</button>
+        <button id="resetBtn" class="btn btn-danger">Reset</button>
+
+        <div class="container">
+            <h2>Times</h2>
+            <h4 id="errorMsg"></h4>            
+            <table class="table table-hover" id="timeTable">
+                <thead>
+                    <tr>
+                        <th>Lap</th>
+                        <th>Time</th>
+                        <th>Timezone</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+
+        <script>
+            window.onload = function() {
+                stopWatch();
+                geoFindMe();
+            }
+        </script>
+
+        <script>
+
+            function stopWatch() {
+                var timeBegan = null
+                , timeStopped = null
+                , stoppedDuration = 0
+                , started = null
+                , lapCount = 1;
+
+                var currentTime;
+                var timeElapsed;
+                var hour;
+                var min;
+                var sec;
+                var ms;
+
+                let startBtn = document.getElementById("startBtn");
+                let stopBtn = document.getElementById("stopBtn");
+                let resetBtn = document.getElementById("resetBtn")
+
+                startBtn.addEventListener("click", function () {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    if (timeBegan === null) {
+                        timeBegan = new Date();
+                    }
+
+                    if (timeStopped !== null) {
+                        stoppedDuration += (new Date() - timeStopped);
+                    }
+                    console.log(stoppedDuration);
+
+                    started = setInterval(clockRunning, 10);
+                });
+
+                stopBtn.addEventListener("click", function () {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    var row = $("<tr><td>" + lapCount + "</td><td>" + getDisplayString() + "</td><td>" + Intl.DateTimeFormat().resolvedOptions().timeZone + "</td><td>" + latitude + "</td><td>" + longitude + "</td></tr>");
+                    $("#timeTable > tbody").append(row);
+                    timeStopped = new Date();
+                    clearInterval(started);
+                    lapCount ++;
+                });
+
+                resetBtn.addEventListener("click", function () {
+                    clearInterval(started);
+                    stoppedDuration = 0;
+                    timeBegan = null;
+                    timeStopped = null;
+                    document.getElementById("time").innerHTML = "00:00:00.000";
+                });
+
+                function clockRunning(){
+                    currentTime = new Date();
+                    timeElapsed = new Date(currentTime - timeBegan - stoppedDuration);
+                    hour = timeElapsed.getUTCHours();
+                    min = timeElapsed.getUTCMinutes();
+                    sec = timeElapsed.getUTCSeconds();
+                    ms = timeElapsed.getUTCMilliseconds();
+                    document.getElementById("time").innerHTML = getDisplayString();
+                };
+
+                function getDisplayString() {
+                    return (hour > 9 ? hour : "0" + hour) + ":" + 
+                        (min > 9 ? min : "0" + min) + ":" + 
+                        (sec > 9 ? sec : "0" + sec) + "." + 
+                        (ms > 99 ? ms : ms > 9 ? "0" + ms : "00" + ms)
+                }
+            }
+            
+            function geoFindMe() {
+
+                var errorMsg = document.getElementById("errorMsg");
+
+                if (!navigator.geolocation){
+                    errMsg.innerHTML = "<h4>Geolocation is not supported by your browser</h4>";
+                    return;
+                }
+
+                function success(position) {
+                    latitude  = position.coords.latitude;
+                    longitude = position.coords.longitude;
+                }
+
+                function error() {
+                    errMsg.innerHTML = "Unable to retrieve your location";
+                }
+
+                navigator.geolocation.getCurrentPosition(success, error);
+            }
+        </script>
+
+        <script>
+
+        </script>
+
+    </body>
+</html>

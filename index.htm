@@ -38,6 +38,9 @@
 
         <script>
             window.onload = function() {
+                startBtn = document.getElementById("startBtn");
+                stopBtn = document.getElementById("stopBtn");
+                resetBtn = document.getElementById("resetBtn");
                 stopWatch();
                 geoFindMe();
             }
@@ -45,24 +48,25 @@
 
         <script>
 
+            var timeBegan = null
+            , timeStopped = null
+            , stoppedDuration = 0
+            , started = null
+            , lapCount = 1
+            , hitStart = false;
+
+            var currentTime;
+            var timeElapsed;
+            var elapsedHour;
+            var elapsedMin;
+            var elapsedSec;
+            var elapsedMs;
+
+            let startBtn;
+            let stopBtn;
+            let resetBtn;
+
             function stopWatch() {
-
-                var timeBegan = null
-                , timeStopped = null
-                , stoppedDuration = 0
-                , started = null
-                , lapCount = 1;
-
-                var currentTime;
-                var timeElapsed;
-                var elapsedHour;
-                var elapsedMin;
-                var elapsedSec;
-                var elapsedMs;
-
-                let startBtn = document.getElementById("startBtn");
-                let stopBtn = document.getElementById("stopBtn");
-                let resetBtn = document.getElementById("resetBtn")
 
                 startBtn.addEventListener("click", function () {
                     startBtn.disabled = true;
@@ -71,22 +75,13 @@
                         timeBegan = new Date();
                     }
                     started = setInterval(clockRunning, 10);
+                    hitStart = true;
                 });
 
                 stopBtn.addEventListener("click", function () {
                     startBtn.disabled = false;
                     stopBtn.disabled = true;
-                    var row = $("<tr><td>" + lapCount +
-                                "</td><td>" + getCurrentTime() +  
-                                "</td><td>" + getTimeElapsed() + 
-                                "</td><td>" + Intl.DateTimeFormat().resolvedOptions().timeZone + 
-                                "</td><td>" + latitude + 
-                                "</td><td>" + longitude + 
-                                "</td></tr>");
-                    $("#timeTable > tbody").append(row);
-                    timeStopped = new Date();
-                    clearInterval(started);
-                    lapCount ++;
+                    geoFindMe();
                 });
 
                 resetBtn.addEventListener("click", function () {
@@ -109,21 +104,21 @@
                     document.getElementById("time").innerHTML = getTimeElapsed();
                 };
 
-                function getTimeElapsed() {
-                    return (elapsedHour > 9 ? elapsedHour : "0" + elapsedHour) + ":" + 
-                        (elapsedMin > 9 ? elapsedMin : "0" + elapsedMin) + ":" + 
-                        (elapsedSec > 9 ? elapsedSec : "0" + elapsedSec) + "." + 
-                        (elapsedMs > 99 ? elapsedMs : elapsedMs > 9 ? "0" + elapsedMs : "00" + elapsedMs);
-                }
+            }
 
-                function getCurrentTime() {
-                    var d = new Date();
-                    var hour = d.getHours();
-                    var min = d.getMinutes();
-                    var sec = d.getSeconds();
-                    return hour + ":" + (min > 9 ? min : "0" + min) + ":" + (sec > 9 ? sec : "0" + sec);
-                }
+            function getTimeElapsed() {
+                return (elapsedHour > 9 ? elapsedHour : "0" + elapsedHour) + ":" + 
+                    (elapsedMin > 9 ? elapsedMin : "0" + elapsedMin) + ":" + 
+                    (elapsedSec > 9 ? elapsedSec : "0" + elapsedSec) + "." + 
+                    (elapsedMs > 99 ? elapsedMs : elapsedMs > 9 ? "0" + elapsedMs : "00" + elapsedMs);
+            }
 
+            function getCurrentTime() {
+                var d = new Date();
+                var hour = d.getHours();
+                var min = d.getMinutes();
+                var sec = d.getSeconds();
+                return hour + ":" + (min > 9 ? min : "0" + min) + ":" + (sec > 9 ? sec : "0" + sec);
             }
 
             function geoFindMe() {
@@ -136,8 +131,21 @@
                 }
 
                 function success(position) {
-                    latitude  = position.coords.latitude;
-                    longitude = position.coords.longitude;
+                    if (hitStart === true) {
+                        latitude  = position.coords.latitude;
+                        longitude = position.coords.longitude;
+                        var row = $("<tr><td>" + lapCount +
+                                    "</td><td>" + getCurrentTime() +  
+                                    "</td><td>" + getTimeElapsed() + 
+                                    "</td><td>" + Intl.DateTimeFormat().resolvedOptions().timeZone + 
+                                    "</td><td>" + latitude + 
+                                    "</td><td>" + longitude + 
+                                    "</td></tr>");
+                        $("#timeTable > tbody").append(row);
+                        timeStopped = new Date();
+                        clearInterval(started);
+                        lapCount ++;
+                    }
                 }
 
                 function error() {
@@ -146,6 +154,7 @@
 
                 navigator.geolocation.getCurrentPosition(success, error);
             }
+
         </script>
 
     </body>

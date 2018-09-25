@@ -44,7 +44,7 @@
                 resetBtn = document.getElementById("resetBtn");
                 hitStart = false;
                 stopWatch();
-                //geoFindMe();
+
                 // builds the table from local storage if there are already values in the table.
                 buildTable();
             }
@@ -56,8 +56,10 @@
             var timeStopped = null;
             var stoppedDuration = 0;
             var started = null;
-            var lapCount = 1;
-            var hitStart;
+            var timeStopped;
+
+            // true when user hits start button, false otherwise
+            var startPressed;
 
             var currentTime;
             var timeElapsed;
@@ -70,8 +72,6 @@
             let stopBtn;
             let resetBtn;
 
-            //var lapCount = localStorage.getItem("lapCount");
-
             function stopWatch() {
 
                 startBtn.addEventListener("click", function () {
@@ -80,13 +80,20 @@
                     if (timeBegan === null) {
                         timeBegan = new Date();
                     }
+                    if (timeStopped !== null) {
+                        stoppedDuration += (new Date() - timeStopped);
+                    }
+                    console.log(stoppedDuration);
                     started = setInterval(clockRunning, 10);
-                    hitStart = true;
+                    startPressed = true;
+                    geoFindMe();
                 });
 
                 stopBtn.addEventListener("click", function () {
                     startBtn.disabled = false;
                     stopBtn.disabled = true;
+                    startPressed = false;
+                    timeStopped = new Date();
                     geoFindMe();
                 });
 
@@ -161,14 +168,15 @@
             }
 
             function makeJson(latitude, longitude) {
-                
+
                 // if this is the first entry in the table, initialize lapCount in local storage
                 if (localStorage.getItem("lapCount") === null) {
+                    console.log("setting lapCount to 1")
                     localStorage.setItem("lapCount", 1);
                 }
-                
+
                 var newJson = {
-                    "lapCount": localStorage.getItem("lapCount", 1),
+                    "lapCount": localStorage.getItem("lapCount"),
                     "Time": getCurrentTime(),
                     "TimeElapsed": getTimeElapsed(),
                     "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -187,29 +195,8 @@
                     return;
                 }
 
-                function success(position) {
-                    if (hitStart === true) {
-                        latitude  = position.coords.latitude;
-                        longitude = position.coords.longitude;
-                        var newJson = makeJson(latitude, longitude);
-                        addRowToTable(newJson);
-                        if (localStorage.getItem("tableJSON") === null) {
-                            localStorage.setItem("tableJSON", JSON.stringify([newJson]));
-                        } else { 
-                            var jsonFromTable = JSON.parse(localStorage.getItem("tableJSON"));
-                            jsonFromTable.push(newJson);
-                            localStorage.setItem("tableJSON", JSON.stringify(jsonFromTable));
-                        }
-                        timeStopped = new Date();
-                        clearInterval(started);
-                        var prevLapCount = localStorage.getItem("lapCount");
-                        localStorage.setItem("lapCount", prevLapCount + 1);
-                    }
-                }
+                function updateLocalStorage(newJson) {
 
-                function error() {
-                    var newJson = makeJson("Error", "Error");
-                    addRowToTable(newJson);
                     if (localStorage.getItem("tableJSON") === null) {
                         localStorage.setItem("tableJSON", JSON.stringify([newJson]));
                     } else { 
@@ -217,16 +204,33 @@
                         jsonFromTable.push(newJson);
                         localStorage.setItem("tableJSON", JSON.stringify(jsonFromTable));
                     }
-                    console.log(timeStopped);
-                    timeStopped = new Date();
-                    clearInterval(started);
-                    var prevLapCount = localStorage.getItem("lapCount");
+
+                    if (startPressed === false) {                        
+                        timeStopped = new Date();
+                        clearInterval(started);
+                    }
+
+                    var prevLapCount = parseInt(localStorage.getItem("lapCount"));
+                    console.log(prevLapCount)
                     localStorage.setItem("lapCount", prevLapCount + 1);
+                }
+
+                function success(position) {
+                    latitude  = position.coords.latitude;
+                    longitude = position.coords.longitude;
+                    var newJson = makeJson(latitude, longitude);
+                    addRowToTable(newJson);
+                    updateLocalStorage(newJson);
+                }
+
+                function error() {
+                    var newJson = makeJson("Error", "Error");
+                    addRowToTable(newJson);
+                    updateLocalStorage(newJson);
                 }
 
                 console.log("getting current position");
                 navigator.geolocation.getCurrentPosition(success, error, {timeout:5000});
-                //navigator.geolocation.getCurrentPosition(success, error);
 
             }
 

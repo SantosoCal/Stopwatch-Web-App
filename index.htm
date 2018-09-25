@@ -61,6 +61,8 @@
             // true when user hits start button, false otherwise
             var startPressed;
 
+            // set immediately when user hits start/stop - more accurate than setting time elapsed after
+            // geolocation completes fetching, since that can take a while
             var currentTimeElapsed;
 
             var currentTime;

@@ -70,6 +70,8 @@
             let stopBtn;
             let resetBtn;
 
+            //var lapCount = localStorage.getItem("lapCount");
+
             function stopWatch() {
 
                 startBtn.addEventListener("click", function () {
@@ -98,7 +100,7 @@
                     startBtn.disabled = false;
                     stopBtn.disabled = true;
                     document.getElementById("time").innerHTML = "00:00:00.000";
-                    lapCount = 1;
+                    localStorage.setItem("lapCount", 1);
                 });
 
                 function clockRunning(){
@@ -157,17 +159,23 @@
                     document.getElementById("timeTable").deleteRow(1);
                 }
             }
-            
-            function makeJson(lapCount, time, timeElapsed, timezone, latitude, longitude) {
+
+            function makeJson(latitude, longitude) {
+                
+                // if this is the first entry in the table, initialize lapCount in local storage
+                if (localStorage.getItem("lapCount") === null) {
+                    localStorage.setItem("lapCount", 1);
+                }
+                
                 var newJson = {
-                                "lapCount": lapCount,
-                                "Time": time,
-                                "TimeElapsed": timeElapsed,
-                                "Timezone": timezone,
-                                "Latitude": latitude,
-                                "Longitude": longitude
-                            };
-                return newJson;
+                    "lapCount": localStorage.getItem("lapCount", 1),
+                    "Time": getCurrentTime(),
+                    "TimeElapsed": getTimeElapsed(),
+                    "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    "Latitude": latitude.toString(),
+                    "Longitude": longitude.toString()
+                };
+                return newJson
             }
 
             function geoFindMe() {
@@ -183,74 +191,42 @@
                     if (hitStart === true) {
                         latitude  = position.coords.latitude;
                         longitude = position.coords.longitude;
+                        var newJson = makeJson(latitude, longitude);
+                        addRowToTable(newJson);
                         if (localStorage.getItem("tableJSON") === null) {
-                            var newJson = [{
-                                "lapCount": lapCount.toString(),
-                                "Time": getCurrentTime(),
-                                "TimeElapsed": getTimeElapsed(),
-                                "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
-                                "Latitude": latitude.toString(),
-                                "Longitude": longitude.toString()
-                            }];
-                            addRowToTable(newJson[0]);
-                            localStorage.setItem("tableJSON", JSON.stringify(newJson));
+                            localStorage.setItem("tableJSON", JSON.stringify([newJson]));
                         } else { 
                             var jsonFromTable = JSON.parse(localStorage.getItem("tableJSON"));
-                            var newJson = {
-                                "lapCount": lapCount.toString(),
-                                "Time": getCurrentTime(),
-                                "TimeElapsed": getTimeElapsed(),
-                                "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
-                                "Latitude": latitude.toString(),
-                                "Longitude": longitude.toString()
-                            };
                             jsonFromTable.push(newJson);
-                            addRowToTable(newJson);
                             localStorage.setItem("tableJSON", JSON.stringify(jsonFromTable));
                         }
                         timeStopped = new Date();
                         clearInterval(started);
-                        lapCount ++;
+                        var prevLapCount = localStorage.getItem("lapCount");
+                        localStorage.setItem("lapCount", prevLapCount + 1);
                     }
                 }
 
                 function error() {
-                    //errorMsg.innerHTML = "Unable to retrieve your location";
-
+                    var newJson = makeJson("Error", "Error");
+                    addRowToTable(newJson);
                     if (localStorage.getItem("tableJSON") === null) {
-                        var newJson = [{
-                            "lapCount": lapCount.toString(),
-                            "Time": getCurrentTime(),
-                            "TimeElapsed": getTimeElapsed(),
-                            "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            "Latitude": "Error",
-                            "Longitude": "Error"
-                        }];
-                        addRowToTable(newJson[0]);
-                        localStorage.setItem("tableJSON", JSON.stringify(newJson));
+                        localStorage.setItem("tableJSON", JSON.stringify([newJson]));
                     } else { 
                         var jsonFromTable = JSON.parse(localStorage.getItem("tableJSON"));
-                        var newJson = {
-                            "lapCount": lapCount.toString(),
-                            "Time": getCurrentTime(),
-                            "TimeElapsed": getTimeElapsed(),
-                            "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            "Latitude": "Error",
-                            "Longitude": "Error"
-                        };
                         jsonFromTable.push(newJson);
-                        addRowToTable(newJson);
                         localStorage.setItem("tableJSON", JSON.stringify(jsonFromTable));
                     }
+                    console.log(timeStopped);
                     timeStopped = new Date();
                     clearInterval(started);
-                    lapCount ++;
-
+                    var prevLapCount = localStorage.getItem("lapCount");
+                    localStorage.setItem("lapCount", prevLapCount + 1);
                 }
 
                 console.log("getting current position");
-                navigator.geolocation.getCurrentPosition(success, error, {timeout:1000});
-                //                navigator.geolocation.getCurrentPosition(success, error);
+                navigator.geolocation.getCurrentPosition(success, error, {timeout:5000});
+                //navigator.geolocation.getCurrentPosition(success, error);
 
             }
 
@@ -277,7 +253,6 @@
                         storage.length !== 0;
                 }
             }
-
 
         </script>
 

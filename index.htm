@@ -4,6 +4,8 @@
         <meta charset="utf-8"> 
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.11.0/bootstrap-table.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     </head>
@@ -35,25 +37,27 @@
             </table>
         </div>
 
-
         <script>
             window.onload = function() {
                 startBtn = document.getElementById("startBtn");
                 stopBtn = document.getElementById("stopBtn");
                 resetBtn = document.getElementById("resetBtn");
+                hitStart = false;
                 stopWatch();
-                geoFindMe();
+                //geoFindMe();
+                // builds the table from local storage if there are already values in the table.
+                buildTable();
             }
         </script>
 
         <script>
 
-            var timeBegan = null
-            , timeStopped = null
-            , stoppedDuration = 0
-            , started = null
-            , lapCount = 1
-            , hitStart = false;
+            var timeBegan = null;
+            var timeStopped = null;
+            var stoppedDuration = 0;
+            var started = null;
+            var lapCount = 1;
+            var hitStart;
 
             var currentTime;
             var timeElapsed;
@@ -85,6 +89,8 @@
                 });
 
                 resetBtn.addEventListener("click", function () {
+                    localStorage.clear();
+                    clearTable();
                     clearInterval(started);
                     stoppedDuration = 0;
                     timeBegan = null;
@@ -92,6 +98,7 @@
                     startBtn.disabled = false;
                     stopBtn.disabled = true;
                     document.getElementById("time").innerHTML = "00:00:00.000";
+                    lapCount = 1;
                 });
 
                 function clockRunning(){
@@ -121,12 +128,54 @@
                 return hour + ":" + (min > 9 ? min : "0" + min) + ":" + (sec > 9 ? sec : "0" + sec);
             }
 
+            function buildTable() {
+                if (localStorage.getItem("tableJSON") != null) {
+                    console.log("tableJSON ISNt NULL")
+                    var myjson = JSON.parse(localStorage.getItem("tableJSON"));
+                    for (var i = 0; i < myjson.length; i++) {
+                        addRowToTable(myjson[i]);
+                    }
+                }
+            }
+
+            function addRowToTable(newJson) {
+                console.log(newJson)
+                var row = $("<tr><td>" + newJson.lapCount +
+                            "</td><td>" + newJson.Time +  
+                            "</td><td>" + newJson.TimeElapsed + 
+                            "</td><td>" + newJson.Timezone + 
+                            "</td><td>" + newJson.Latitude + 
+                            "</td><td>" + newJson.Longitude + 
+                            "</td></tr>");
+                $("#timeTable > tbody").append(row);
+            }
+
+            function clearTable() {
+                var count = document.getElementById("timeTable").rows.length;
+                console.log(count);
+                for (i = 0; i < count - 1; i++) {
+                    document.getElementById("timeTable").deleteRow(1);
+                }
+            }
+            
+            function makeJson(lapCount, time, timeElapsed, timezone, latitude, longitude) {
+                var newJson = {
+                                "lapCount": lapCount,
+                                "Time": time,
+                                "TimeElapsed": timeElapsed,
+                                "Timezone": timezone,
+                                "Latitude": latitude,
+                                "Longitude": longitude
+                            };
+                return newJson;
+            }
+
             function geoFindMe() {
 
                 var errorMsg = document.getElementById("errorMsg");
 
                 if (!navigator.geolocation){
-                    errMsg.innerHTML = "<h4>Geolocation is not supported by your browser</h4>";
+                    errorMsg.innerHTML = "<h4>Geolocation is not supported by your browser</h4>";
                     return;
                 }
 
@@ -134,14 +183,31 @@
                     if (hitStart === true) {
                         latitude  = position.coords.latitude;
                         longitude = position.coords.longitude;
-                        var row = $("<tr><td>" + lapCount +
-                                    "</td><td>" + getCurrentTime() +  
-                                    "</td><td>" + getTimeElapsed() + 
-                                    "</td><td>" + Intl.DateTimeFormat().resolvedOptions().timeZone + 
-                                    "</td><td>" + latitude + 
-                                    "</td><td>" + longitude + 
-                                    "</td></tr>");
-                        $("#timeTable > tbody").append(row);
+                        if (localStorage.getItem("tableJSON") === null) {
+                            var newJson = [{
+                                "lapCount": lapCount.toString(),
+                                "Time": getCurrentTime(),
+                                "TimeElapsed": getTimeElapsed(),
+                                "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                "Latitude": latitude.toString(),
+                                "Longitude": longitude.toString()
+                            }];
+                            addRowToTable(newJson[0]);
+                            localStorage.setItem("tableJSON", JSON.stringify(newJson));
+                        } else { 
+                            var jsonFromTable = JSON.parse(localStorage.getItem("tableJSON"));
+                            var newJson = {
+                                "lapCount": lapCount.toString(),
+                                "Time": getCurrentTime(),
+                                "TimeElapsed": getTimeElapsed(),
+                                "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                "Latitude": latitude.toString(),
+                                "Longitude": longitude.toString()
+                            };
+                            jsonFromTable.push(newJson);
+                            addRowToTable(newJson);
+                            localStorage.setItem("tableJSON", JSON.stringify(jsonFromTable));
+                        }
                         timeStopped = new Date();
                         clearInterval(started);
                         lapCount ++;
@@ -149,11 +215,69 @@
                 }
 
                 function error() {
-                    errMsg.innerHTML = "Unable to retrieve your location";
+                    //errorMsg.innerHTML = "Unable to retrieve your location";
+
+                    if (localStorage.getItem("tableJSON") === null) {
+                        var newJson = [{
+                            "lapCount": lapCount.toString(),
+                            "Time": getCurrentTime(),
+                            "TimeElapsed": getTimeElapsed(),
+                            "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+                            "Latitude": "Error",
+                            "Longitude": "Error"
+                        }];
+                        addRowToTable(newJson[0]);
+                        localStorage.setItem("tableJSON", JSON.stringify(newJson));
+                    } else { 
+                        var jsonFromTable = JSON.parse(localStorage.getItem("tableJSON"));
+                        var newJson = {
+                            "lapCount": lapCount.toString(),
+                            "Time": getCurrentTime(),
+                            "TimeElapsed": getTimeElapsed(),
+                            "Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+                            "Latitude": "Error",
+                            "Longitude": "Error"
+                        };
+                        jsonFromTable.push(newJson);
+                        addRowToTable(newJson);
+                        localStorage.setItem("tableJSON", JSON.stringify(jsonFromTable));
+                    }
+                    timeStopped = new Date();
+                    clearInterval(started);
+                    lapCount ++;
+
                 }
 
-                navigator.geolocation.getCurrentPosition(success, error);
+                console.log("getting current position");
+                navigator.geolocation.getCurrentPosition(success, error, {timeout:1000});
+                //                navigator.geolocation.getCurrentPosition(success, error);
+
             }
+
+            function storageAvailable(type) {
+                try {
+                    var storage = window[type],
+                        x = '__storage_test__';
+                    storage.setItem(x, x);
+                    storage.removeItem(x);
+                    return true;
+                }
+                catch(e) {
+                    return e instanceof DOMException && (
+                        // everything except Firefox
+                        e.code === 22 ||
+                        // Firefox
+                        e.code === 1014 ||
+                        // test name field too, because code might not be present
+                        // everything except Firefox
+                        e.name === 'QuotaExceededError' ||
+                        // Firefox
+                        e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+                        // acknowledge QuotaExceededError only if there's something already stored
+                        storage.length !== 0;
+                }
+            }
+
 
         </script>
 
